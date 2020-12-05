@@ -1,0 +1,37 @@
+[
+    {
+        "file": "test/cos_sin.csv",
+        "index": [0, 1],
+        "title": "cos"
+    },
+    {
+        "file": "test/cos_sin.csv",
+        "index": [0, 2],
+        "title": "sin"
+    },
+    {
+        "file": "test/cos_sin.csv",
+        "index": [0, 1, 2],
+        "title": "both"
+    },
+    {
+        "file": "test/cos_sin.csv",
+        "index": [1, 2],
+        "title": "circle"
+    },
+    {
+        "file": "test/cos_sin.csv",
+        "index": [-1, 2],
+        "title": "indexed_sin"
+    },
+    {
+        "file": "test/cos_sin.csv",
+        "index": [-1, 1],
+        "title": "indexed_cos"
+    },
+    {
+        "file": "test/cos_sin.csv",
+        "index": [-1, 1, 2],
+        "title": "indexed_both"
+    }
+]
