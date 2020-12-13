@@ -11,7 +11,23 @@ class LinePlotter(tkinter.Frame):
         self._ys = []
         self._colors = []
         self._size = (800, 600)
+        self._canvas_range = None
         self._margin = 30
+        self.root.bind("<Configure>", self.cb_resize)
+        self._cache = None
+
+        self._adjust_canvas_range()
+
+    def cb_resize(self, _):
+        size = (self.root.winfo_width(), self.root.winfo_height())
+        if size != self._size:
+            self._size = (self.root.winfo_width(), self.root.winfo_height())
+            self._adjust_canvas_range()
+            if self._cache is not None:
+                self.draw(title=self._cache['title'],
+                          share_coordinate=self._cache['share_coordinate'])
+
+    def _adjust_canvas_range(self):
         self._canvas_range = {
             'x': {
                 'min': self._margin,
@@ -52,7 +68,7 @@ class LinePlotter(tkinter.Frame):
                                                          src_range['min'])
         src_base = src_range['min']
         dst_base = dst_range['min']
-        return tuple(int((s - src_base) * scale + dst_base) for s in data)
+        return tuple(round((s - src_base) * scale + dst_base) for s in data)
 
     def _map_line(self, xs: list, ys: list, line_range: dict):
         xs_px = self._map_array(line_range['x'], self._canvas_range['x'], xs)
@@ -98,9 +114,9 @@ class LinePlotter(tkinter.Frame):
                                self._size[1] - self._margin // 2,
                                text='{:.1E}'.format(val))
             canvas.create_line(pos,
-                               0,
+                               self._canvas_range['y']['min'],
                                pos,
-                               self._size[1] - self._margin,
+                               self._canvas_range['y']['max'],
                                fill='grey')
         ys = linspace(line_range['y']['min'], line_range['y']['max'],
                       line_range['y']['resolution'])
@@ -109,9 +125,9 @@ class LinePlotter(tkinter.Frame):
         for val, pos in zip(ys, ys_px):
             pos = self._size[1] - 1 - pos
             canvas.create_text(self._margin, pos, text='{:.1E}'.format(val))
-            canvas.create_line(self._margin,
+            canvas.create_line(self._canvas_range['x']['min'],
                                pos,
-                               self._size[0],
+                               self._canvas_range['x']['max'],
                                pos,
                                fill='grey')
 
@@ -119,13 +135,23 @@ class LinePlotter(tkinter.Frame):
         assert len(self._xs) > 0, 'empty plot'
         assert len(self._xs) == len(self._ys) == len(
             self._colors), 'lines not matched'
-        self.master.title(title)
-        self.pack(fill=tkinter.BOTH, expand=1)
 
-        canvas = tkinter.Canvas(self)
+        is_init = self._cache is None
+        if is_init:
+            self.master.title(title)
+            self.pack(fill=tkinter.BOTH, expand=1)
+
+            self._cache = {
+                'canvas': tkinter.Canvas(self),
+                'title': title,
+                'share_coordinate': share_coordinate
+            }
+        else:
+            self._cache['canvas'].delete('all')
+
         if share_coordinate:
             line_range = self._resolve_canvas(xs=self._xs, ys=self._ys)
-            self._ticks(line_range=line_range, canvas=canvas)
+            self._ticks(line_range=line_range, canvas=self._cache['canvas'])
 
         for i in range(len(self._ys)):
             xs_px, ys_px = self._map_line(
@@ -136,14 +162,15 @@ class LinePlotter(tkinter.Frame):
                                xs_px=xs_px,
                                ys_px=ys_px,
                                color=self._colors[i],
-                               canvas=canvas)
-            canvas.create_line(*functools.reduce(
+                               canvas=self._cache['canvas'])
+            self._cache['canvas'].create_line(*functools.reduce(
                 lambda x_px, y_px: x_px + y_px, zip(xs_px, ys_px)),
-                               fill=self._colors[i])
+                                              fill=self._colors[i])
 
-        canvas.pack(fill=tkinter.BOTH, expand=1)
-        self.root.geometry(f'{self._size[0]}x{self._size[1]}')
-        self.root.mainloop()
+        if is_init:
+            self._cache['canvas'].pack(fill=tkinter.BOTH, expand=1)
+            self.root.geometry(f'{self._size[0]}x{self._size[1]}')
+            self.root.mainloop()
 
 
 if __name__ == '__main__':
