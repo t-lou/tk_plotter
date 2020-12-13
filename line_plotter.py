@@ -1,3 +1,4 @@
+import functools
 import tkinter
 import math
 
@@ -31,8 +32,8 @@ class LinePlotter(tkinter.Frame):
         self._ys.append(ys)
         self._colors.append(color)
 
-    def _resolve_convans(self):
-        assert len(self._xs) == len(self._ys), 'data length not matched'
+    def _resolve_canvas(self, xs: list, ys: list):
+        assert len(xs) == len(ys), 'data length not matched'
 
         def dim_resolve(data: list):
             max_val = max(max(val) for val in data)
@@ -43,7 +44,7 @@ class LinePlotter(tkinter.Frame):
             min_val = math.floor(min_val / resolution) * resolution
             return {'min': min_val, 'max': max_val, 'resolution': resolution}
 
-        return {'x': dim_resolve(self._xs), 'y': dim_resolve(self._ys)}
+        return {'x': dim_resolve(xs), 'y': dim_resolve(ys)}
 
     @staticmethod
     def _map_array(src_range, dst_range, data):
@@ -57,11 +58,29 @@ class LinePlotter(tkinter.Frame):
         xs_px = self._map_array(line_range['x'], self._canvas_range['x'], xs)
         ys_px = self._map_array(line_range['y'], self._canvas_range['y'], ys)
         ys_px = tuple(self._size[1] - 1 - y_px for y_px in ys_px)
-        points = []
-        for x, y in zip(xs_px, ys_px):
-            points.append(x)
-            points.append(y)
-        return points
+        return xs_px, ys_px
+
+    @classmethod
+    def _sparsify(cls, array: list, num: int):
+        return array[::max(len(array) // num, 1)]
+
+    @classmethod
+    def _label_values(cls, xs: list, ys: list, xs_px: list, ys_px: list,
+                      color: str, canvas: tkinter.Canvas):
+        # selected = set(cls._sparsify(tuple(range(len(xs))), 6))
+        selected = set([ys.index(max(ys)), ys.index(min(ys))])
+        num_labels = 6
+        half_interval = len(xs) // (num_labels * 2)
+        selected = selected.union(
+            set(i for i in cls._sparsify(tuple(range(len(xs))), 6) if all(
+                abs(i - m) > half_interval for m in selected)))
+
+        offset = 10
+        for i in selected:
+            canvas.create_text(xs_px[i],
+                               ys_px[i] - offset,
+                               text='{:.1E}'.format(ys[i]),
+                               fill=color)
 
     def _ticks(self, line_range: dict, canvas: tkinter.Canvas):
         def linspace(start: float, end: float, interval: float):
@@ -70,12 +89,9 @@ class LinePlotter(tkinter.Frame):
                 ret.append(interval + ret[-1])
             return ret
 
-        def sparsify(array: list, num: int):
-            return array[::(len(array) // num)]
-
         xs = linspace(line_range['x']['min'], line_range['x']['max'],
                       line_range['x']['resolution'])
-        xs = sparsify(xs, 10)
+        xs = self._sparsify(xs, 10)
         xs_px = self._map_array(line_range['x'], self._canvas_range['x'], xs)
         for val, pos in zip(xs, xs_px):
             canvas.create_text(pos,
@@ -88,7 +104,7 @@ class LinePlotter(tkinter.Frame):
                                fill='grey')
         ys = linspace(line_range['y']['min'], line_range['y']['max'],
                       line_range['y']['resolution'])
-        ys = sparsify(ys, 6)
+        ys = self._sparsify(ys, 6)
         ys_px = self._map_array(line_range['y'], self._canvas_range['y'], ys)
         for val, pos in zip(ys, ys_px):
             pos = self._size[1] - 1 - pos
@@ -99,7 +115,7 @@ class LinePlotter(tkinter.Frame):
                                pos,
                                fill='grey')
 
-    def draw(self, title: str = 'plot'):
+    def draw(self, title: str = 'plot', share_coordinate: bool = False):
         assert len(self._xs) > 0, 'empty plot'
         assert len(self._xs) == len(self._ys) == len(
             self._colors), 'lines not matched'
@@ -107,13 +123,22 @@ class LinePlotter(tkinter.Frame):
         self.pack(fill=tkinter.BOTH, expand=1)
 
         canvas = tkinter.Canvas(self)
-        line_range = self._resolve_convans()
-        self._ticks(line_range=line_range, canvas=canvas)
-        print(line_range)
+        if share_coordinate:
+            line_range = self._resolve_canvas(xs=self._xs, ys=self._ys)
+            self._ticks(line_range=line_range, canvas=canvas)
 
         for i in range(len(self._ys)):
-            canvas.create_line(*self._map_line(self._xs[i], self._ys[i],
-                                               line_range),
+            xs_px, ys_px = self._map_line(
+                self._xs[i], self._ys[i], line_range if share_coordinate else
+                self._resolve_canvas(xs=(self._xs[i], ), ys=(self._ys[i], )))
+            self._label_values(xs=self._xs[i],
+                               ys=self._ys[i],
+                               xs_px=xs_px,
+                               ys_px=ys_px,
+                               color=self._colors[i],
+                               canvas=canvas)
+            canvas.create_line(*functools.reduce(
+                lambda x_px, y_px: x_px + y_px, zip(xs_px, ys_px)),
                                fill=self._colors[i])
 
         canvas.pack(fill=tkinter.BOTH, expand=1)

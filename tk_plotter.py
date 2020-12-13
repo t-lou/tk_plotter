@@ -8,6 +8,8 @@ import load_csv
 
 kColors = ('red', 'green', 'blue', 'cyan', 'yellow', 'magenta')
 
+kDefaultConfig = {'share_coordinate': True}
+
 
 def plot(plot_config: dict):
     plotter = line_plotter.LinePlotter()
@@ -16,7 +18,8 @@ def plot(plot_config: dict):
     data = tuple(zip(*data))
     for i, y in enumerate(data[1:]):
         plotter.add_line(ys=y, xs=data[0], color=kColors[i % len(kColors)])
-    plotter.draw(title=plot_config['title'])
+    plotter.draw(title=plot_config['title'],
+                 share_coordinate=plot_config['share_coordinate'])
 
 
 def main():
@@ -38,7 +41,9 @@ def main():
 
     processes = []
     for plot_config in config:
-        print(plot_config)
+        for config in kDefaultConfig:
+            if config not in plot_config:
+                plot_config[config] = kDefaultConfig[config]
         processes.append(
             multiprocessing.Process(target=plot, args=(plot_config, )))
         processes[-1].start()
