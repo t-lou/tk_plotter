@@ -8,7 +8,7 @@ import load_csv
 
 kColors = ('red', 'green', 'blue', 'cyan', 'yellow', 'magenta')
 
-kDefaultConfig = {'share_coordinate': True}
+kDefaultConfig = {'share_coordinate': True, 'states': None}
 
 
 def plot(plot_config: dict):
@@ -18,8 +18,10 @@ def plot(plot_config: dict):
     data = tuple(zip(*data))
     for i, y in enumerate(data[1:]):
         plotter.add_line(ys=y, xs=data[0], color=kColors[i % len(kColors)])
+        # TODO add the states somewhere
     plotter.draw(title=plot_config['title'],
-                 share_coordinate=plot_config['share_coordinate'])
+                 share_coordinate=(plot_config['share_coordinate']
+                                   and plot_config['states'] is not None))
 
 
 def main():
@@ -36,6 +38,10 @@ def main():
                for i in ('file', 'index', 'title')), 'config not complete'
     assert all(len(pc['index']) >= 2
                for pc in config), 'index not enough, must be at least [x,y1]'
+    assert all('states' not in c or len(c['states']) + 1 == len(c['index']) for c in config), \
+        'number of states is wrong'
+    assert not any('states' in c and any(any(int(v) != float(v) for v in s) for s in c['states']) for c in config), \
+        'at least one of the states not int'
     if any(len(pc['index']) >= len(kColors) for pc in config):
         print('too many lines, will reuse color')
 

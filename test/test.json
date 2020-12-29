@@ -35,5 +35,21 @@
         "index": [-1, 0, 2],
         "title": "indexed_vs_sin_together",
         "share_coordinate": true
+    },
+    {
+        "file": "test/states.csv",
+        "index": [-1, 2, 3],
+        "title": "states",
+        "states":
+        [
+            {
+                "1": "odd",
+                "0": "even"
+            },
+            {
+                "0": "0",
+                "1": "1"
+            }
+        ]
     }
 ]
