@@ -1,16 +1,16 @@
 import os
+import csv
 
 
 def load(filename: str, separator: str = ',', index: list = None):
     assert os.path.isfile(filename), 'file not found'
+
     col_num = -1
     table = []
     with open(filename, 'r') as fi:
-        while True:
-            line = fi.readline().strip()
-            if not bool(line):
-                break
-            elems = tuple(float(elem) for elem in line.split(separator))
+        reader = csv.reader(fi, delimiter=separator)
+        for row in reader:
+            elems = tuple(float(e) for e in row)
             if col_num < 0:
                 col_num = len(elems)
             assert col_num > 0 and col_num == len(elems), f'wrong line {line}'
